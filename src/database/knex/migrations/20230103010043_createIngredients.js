@@ -1,7 +1,7 @@
 exports.up = (knex) =>
   knex.schema.createTable("ingredients", (table) => {
     table.increments("id");
-    table.text("name").notNullable();
+    table.text("ingredient_name").notNullable();
     table
       .integer("dishe_id")
       .references("id")
