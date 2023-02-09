@@ -4,6 +4,7 @@ exports.up = (knex) =>
     table.text("name");
     table.text("description");
     table.decimal("price");
+    table.text("picture");
     table.integer("user_id").references("id").inTable("users");
   });
 

@@ -1,4 +1,6 @@
 const knex = require("../database/knex");
+const sqliteConnection = require("../database/sqlite");
+const AppError = require("../utils/AppError");
 
 class DishesController {
   async create(request, response) {
@@ -23,6 +25,44 @@ class DishesController {
 
     return response.json();
   }
+
+  async update(request, response) {
+    const { name, description, price } = request.body;
+    const dishe_id = request.user.id;
+    const database = await sqliteConnection();
+    const dishe = await database.get("SELECT * FROM dishes WHERE id = (?)", [
+      dishe_id,
+    ]);
+
+    if (!dishe) {
+      throw new AppError("Prato não encontrado!");
+    }
+    const disheWithUpdatedName = await database.get(
+      "SELECT * FROM dishes WHERE name =(?)",
+      [name]
+    );
+
+    if (disheWithUpdatedName && disheWithUpdatedName.id !== dishe.id) {
+      throw new AppError("O nome para este prato já está em uso!");
+    }
+
+    dishe.name = name ?? dishe.name;
+    dishe.description = description ?? dishe.description;
+    dishe.price = price ?? dishe.price;
+
+    await database.run(
+      `
+    UPDATE dishes SET
+    name = ?,
+    description = ?,
+    price = ?
+    WHERE id = ?`,
+      [dishe.name, dishe.description, dishe.price, dishe_id]
+    );
+
+    return response.status(200).json();
+  }
+
   async show(request, response) {
     const { id } = request.params;
 
@@ -45,6 +85,7 @@ class DishesController {
 
     return response.json();
   }
+
   async index(request, response) {
     const { name, ingredients } = request.query;
     const user_id = request.user.id;
@@ -70,13 +111,13 @@ class DishesController {
     }
     const userIngredients = await knex("ingredients").where({ user_id });
 
-    const dishesWithIngredients = dishes.map((dish) => {
+    const dishesWithIngredients = dishes.map((dishe) => {
       const dishIngredients = userIngredients.filter(
-        (ingredient) => ingredient.dishe_id === dish.id
+        (ingredient) => ingredient.dishe_id === dishe.id
       );
 
       return {
-        ...dish,
+        ...dishe,
         ingredients: dishIngredients,
       };
     });
