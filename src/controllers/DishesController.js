@@ -4,11 +4,12 @@ const AppError = require("../utils/AppError");
 
 class DishesController {
   async create(request, response) {
-    const { name, description, price, ingredients } = request.body;
+    const { name, category, description, price, ingredients } = request.body;
     const user_id = request.user.id;
 
     const dishe_id = await knex("dishes").insert({
       name,
+      category,
       description,
       price,
       user_id,
@@ -27,9 +28,10 @@ class DishesController {
   }
 
   async update(request, response) {
-    const { name, description, price } = request.body;
+    const { name, category, description, price } = request.body;
     const dishe_id = request.user.id;
     const database = await sqliteConnection();
+
     const dishe = await database.get("SELECT * FROM dishes WHERE id = (?)", [
       dishe_id,
     ]);
@@ -47,6 +49,7 @@ class DishesController {
     }
 
     dishe.name = name ?? dishe.name;
+    dishe.category = category ?? dishe.category;
     dishe.description = description ?? dishe.description;
     dishe.price = price ?? dishe.price;
 
