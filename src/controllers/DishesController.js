@@ -7,7 +7,7 @@ class DishesController {
     const { name, category, description, price, ingredients } = request.body;
     const user_id = request.user.id;
 
-    const dishe_id = await knex("dishes").insert({
+    const dish_id = await knex("dishes").insert({
       name,
       category,
       description,
@@ -17,7 +17,7 @@ class DishesController {
 
     const ingredientsInsert = ingredients.map((ingredient_name) => {
       return {
-        dishe_id,
+        dish_id,
         ingredient_name,
         user_id,
       };
@@ -26,17 +26,25 @@ class DishesController {
 
     return response.json();
   }
+  async delete(request, response) {
+    const { id } = request.params;
 
+    await knex.raw("PRAGMA foreign_keys = ON");
+    await knex("dishes").where({ id }).delete();
+
+    return response.json();
+  }
   async update(request, response) {
-    const { name, category, description, price } = request.body;
-    const dishe_id = request.user.id;
+    const { name, category, description, price, ingredients } = request.body;
+    const dish_id = request.user.id;
     const database = await sqliteConnection();
+    const { id } = request.params;
 
-    const dishe = await database.get("SELECT * FROM dishes WHERE id = (?)", [
-      dishe_id,
+    const dish = await database.get("SELECT * FROM dishes WHERE id = (?)", [
+      dish_id,
     ]);
 
-    if (!dishe) {
+    if (!dish) {
       throw new AppError("Prato não encontrado!");
     }
     const disheWithUpdatedName = await database.get(
@@ -44,24 +52,37 @@ class DishesController {
       [name]
     );
 
-    if (disheWithUpdatedName && disheWithUpdatedName.id !== dishe.id) {
+    if (disheWithUpdatedName && disheWithUpdatedName.id !== dish.id) {
       throw new AppError("O nome para este prato já está em uso!");
     }
 
-    dishe.name = name ?? dishe.name;
-    dishe.category = category ?? dishe.category;
-    dishe.description = description ?? dishe.description;
-    dishe.price = price ?? dishe.price;
+    dish.name = name ?? dish.name;
+    dish.category = category ?? dish.category;
+    dish.description = description ?? dish.description;
+    dish.price = price ?? dish.price;
 
     await database.run(
       `
     UPDATE dishes SET
     name = ?,
+    category = ?,
     description = ?,
     price = ?
     WHERE id = ?`,
-      [dishe.name, dishe.description, dishe.price, dishe_id]
+      [dish.name, dish.category, dish.description, dish.price, dish_id]
     );
+
+    let ingredientsInsert;
+
+    ingredientsInsert = ingredients.map((ingredient_name) => {
+      return {
+        dish_id,
+        user_id: dish_id,
+        ingredient_name,
+      };
+    });
+    await knex("ingredients").where({ dish_id }).delete();
+    await knex("ingredients").where({ dish_id }).insert(ingredientsInsert);
 
     return response.status(200).json();
   }
@@ -78,15 +99,6 @@ class DishesController {
       ...dishe,
       ingredients,
     });
-  }
-
-  async delete(request, response) {
-    const { id } = request.params;
-
-    await knex.raw("PRAGMA foreign_keys = ON");
-    await knex("dishes").where({ id }).delete();
-
-    return response.json();
   }
 
   async index(request, response) {
