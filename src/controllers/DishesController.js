@@ -74,8 +74,9 @@ class DishesController {
 
     let ingredientsInsert;
 
-    ingredientsInsert = ingredients.map((ingredient_name) => {
+    ingredientsInsert = ingredients.map((ingredient_name, id) => {
       return {
+        id,
         dish_id,
         user_id: dish_id,
         ingredient_name,
