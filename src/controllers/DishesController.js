@@ -7,7 +7,7 @@ class DishesController {
     const { name, category, description, price, ingredients } = request.body;
     const user_id = request.user.id;
 
-    const dish_id = await knex("dishes").insert({
+    const dishe_id = await knex("dishes").insert({
       name,
       category,
       description,
@@ -17,7 +17,7 @@ class DishesController {
 
     const ingredientsInsert = ingredients.map((ingredient_name) => {
       return {
-        dish_id,
+        dishe_id,
         ingredient_name,
         user_id,
       };
@@ -36,12 +36,12 @@ class DishesController {
   }
   async update(request, response) {
     const { name, category, description, price, ingredients } = request.body;
-    const dish_id = request.user.id;
+    const dishe_id = request.user.id;
     const database = await sqliteConnection();
     const { id } = request.params;
 
     const dish = await database.get("SELECT * FROM dishes WHERE id = (?)", [
-      dish_id,
+      dishe_id,
     ]);
 
     if (!dish) {
@@ -69,7 +69,7 @@ class DishesController {
     description = ?,
     price = ?
     WHERE id = ?`,
-      [dish.name, dish.category, dish.description, dish.price, dish_id]
+      [dish.name, dish.category, dish.description, dish.price, dishe_id]
     );
 
     let ingredientsInsert;
@@ -77,13 +77,13 @@ class DishesController {
     ingredientsInsert = ingredients.map((ingredient_name, id) => {
       return {
         id,
-        dish_id,
-        user_id: dish_id,
+        dishe_id,
+        user_id: dishe_id,
         ingredient_name,
       };
     });
-    await knex("ingredients").where({ dish_id }).delete();
-    await knex("ingredients").where({ dish_id }).insert(ingredientsInsert);
+    await knex("ingredients").where({ dishe_id }).delete();
+    await knex("ingredients").where({ dishe_id }).insert(ingredientsInsert);
 
     return response.status(200).json();
   }

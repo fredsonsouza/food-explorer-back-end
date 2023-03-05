@@ -3,7 +3,7 @@ exports.up = (knex) =>
     table.increments("id");
     table.text("ingredient_name").notNullable();
     table
-      .integer("dish_id")
+      .integer("dishe_id")
       .references("id")
       .inTable("dishes")
       .onDelete("CASCADE");

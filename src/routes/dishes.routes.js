@@ -17,7 +17,7 @@ dishesRoutes.use(ensureAuthenticated);
 
 dishesRoutes.get("/", dishesController.index);
 dishesRoutes.put("/", ensureAuthenticated, dishesController.update);
-dishesRoutes.post("/", isAdmin, dishesController.create);
+dishesRoutes.post("/", ensureAuthenticated, dishesController.create);
 dishesRoutes.get("/:id", dishesController.show);
 dishesRoutes.delete("/:id", dishesController.delete);
 
