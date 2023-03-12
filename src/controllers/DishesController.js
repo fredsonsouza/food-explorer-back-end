@@ -1,13 +1,19 @@
 const knex = require("../database/knex");
 const sqliteConnection = require("../database/sqlite");
 const AppError = require("../utils/AppError");
+const DiskStorage = require("../providers/DiskStorage");
 
 class DishesController {
   async create(request, response) {
     const { name, category, description, price, ingredients } = request.body;
     const user_id = request.user.id;
 
-    const dishe_id = await knex("dishes").insert({
+    const dishFilename = request.file.filename;
+    const diskStorage = new DiskStorage();
+    const filename = await diskStorage.saveFile(dishFilename);
+
+    const dish_id = await knex("dishes").insert({
+      picture: filename,
       name,
       category,
       description,
@@ -15,16 +21,17 @@ class DishesController {
       user_id,
     });
 
-    const ingredientsInsert = ingredients.map((ingredient_name) => {
+    const ingredientsInsert = ingredients.map((ingredient) => {
       return {
-        dishe_id,
-        ingredient_name,
+        ingredient_name: ingredient,
+        dish_id,
         user_id,
       };
     });
+
     await knex("ingredients").insert(ingredientsInsert);
 
-    return response.json();
+    return response.json(201);
   }
   async delete(request, response) {
     const { id } = request.params;
@@ -36,12 +43,12 @@ class DishesController {
   }
   async update(request, response) {
     const { name, category, description, price, ingredients } = request.body;
-    const dishe_id = request.user.id;
+    const dish_id = request.user.id;
     const database = await sqliteConnection();
     const { id } = request.params;
 
     const dish = await database.get("SELECT * FROM dishes WHERE id = (?)", [
-      dishe_id,
+      dish_id,
     ]);
 
     if (!dish) {
@@ -69,7 +76,7 @@ class DishesController {
     description = ?,
     price = ?
     WHERE id = ?`,
-      [dish.name, dish.category, dish.description, dish.price, dishe_id]
+      [dish.name, dish.category, dish.description, dish.price, dish_id]
     );
 
     let ingredientsInsert;
@@ -77,13 +84,13 @@ class DishesController {
     ingredientsInsert = ingredients.map((ingredient_name, id) => {
       return {
         id,
-        dishe_id,
-        user_id: dishe_id,
+        dish_id,
+        user_id: dish_id,
         ingredient_name,
       };
     });
-    await knex("ingredients").where({ dishe_id }).delete();
-    await knex("ingredients").where({ dishe_id }).insert(ingredientsInsert);
+    await knex("ingredients").where({ dish_id }).delete();
+    await knex("ingredients").where({ dish_id }).insert(ingredientsInsert);
 
     return response.status(200).json();
   }
@@ -91,13 +98,13 @@ class DishesController {
   async show(request, response) {
     const { id } = request.params;
 
-    const dishe = await knex("dishes").where({ id }).first();
+    const dish = await knex("dishes").where({ id }).first();
     const ingredients = await knex("ingredients")
-      .where({ dishe_id: id })
+      .where({ dish_id: id })
       .orderBy("name");
 
     response.json({
-      ...dishe,
+      ...dish,
       ingredients,
     });
   }
@@ -117,7 +124,7 @@ class DishesController {
         .where("dishes.user_id", user_id)
         .whereLike("dishes.name", `%${name}%`)
         .whereIn("ingredient_name", filterIngredients)
-        .innerJoin("dishes", "dishes.id", "ingredients.dishe_id")
+        .innerJoin("dishes", "dishes.id", "ingredients.dish_id")
         .orderBy("dishes.name");
     } else {
       dishes = await knex("dishes")
@@ -127,13 +134,13 @@ class DishesController {
     }
     const userIngredients = await knex("ingredients").where({ user_id });
 
-    const dishesWithIngredients = dishes.map((dishe) => {
+    const dishesWithIngredients = dishes.map((dish) => {
       const dishIngredients = userIngredients.filter(
-        (ingredient) => ingredient.dishe_id === dishe.id
+        (ingredient) => ingredient.dish_id === dish.id
       );
 
       return {
-        ...dishe,
+        ...dish,
         ingredients: dishIngredients,
       };
     });
